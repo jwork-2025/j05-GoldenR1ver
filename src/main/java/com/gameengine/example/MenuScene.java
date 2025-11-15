@@ -13,7 +13,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+
+/**
+ * 主菜单场景：提供游戏开始、回放、退出选项
+ * 支持键盘和鼠标操作
+ */
 public class MenuScene extends Scene {
+    // 菜单选项枚举
     public enum MenuOption {
         START_GAME,
         REPLAY,
@@ -23,13 +29,13 @@ public class MenuScene extends Scene {
     private IRenderer renderer;
     private InputManager inputManager;
     private GameEngine engine;
-    private int selectedIndex;
-    private MenuOption[] options;
-    private boolean selectionMade;
-    private MenuOption selectedOption;
-    private List<String> replayFiles;
-    private boolean showReplayInfo;
-    private int debugFrames;
+    private int selectedIndex;           // 当前选中的菜单项索引
+    private MenuOption[] options;        // 菜单选项数组
+    private boolean selectionMade;       // 是否已做出选择
+    private MenuOption selectedOption;   // 选中的选项
+    private List<String> replayFiles;    // 回放文件列表
+    private boolean showReplayInfo;      // 是否显示回放信息
+    private int debugFrames;             // 调试帧计数器
     
     public MenuScene(GameEngine engine, String name) {
         super(name);
@@ -44,7 +50,7 @@ public class MenuScene extends Scene {
         this.showReplayInfo = false;
     }
     
-    private void loadReplayFiles() {}
+    private void loadReplayFiles() {}   // 预留：加载回放文件列表
     
     @Override
     public void initialize() {
@@ -66,16 +72,21 @@ public class MenuScene extends Scene {
             processSelection();
         }
     }
-    
+
+    /**
+     * 处理菜单选择：键盘和鼠标输入
+     */
     private void handleMenuSelection() {
-        if (inputManager.isKeyJustPressed(38)) {
+        // 键盘导航：上下方向键
+        if (inputManager.isKeyJustPressed(38)) {     // 上箭头
             selectedIndex = (selectedIndex - 1 + options.length) % options.length;
-        } else if (inputManager.isKeyJustPressed(40)) {
+        } else if (inputManager.isKeyJustPressed(40)) { // 下箭头
             selectedIndex = (selectedIndex + 1) % options.length;
-        } else if (inputManager.isKeyJustPressed(10) || inputManager.isKeyJustPressed(32)) {
+        } else if (inputManager.isKeyJustPressed(10) || inputManager.isKeyJustPressed(32)) {    // 回车/空格
             selectionMade = true;
             selectedOption = options[selectedIndex];
-            
+
+            // 立即处理回放和退出选项
             if (selectedOption == MenuOption.REPLAY) {
                 engine.disableRecording();
                 Scene replay = new ReplayScene(engine, null);
@@ -86,7 +97,8 @@ public class MenuScene extends Scene {
                 System.exit(0);
             }
         }
-        
+
+        // 鼠标点击选择
         Vector2 mousePos = inputManager.getMousePosition();
         if (inputManager.isMouseButtonJustPressed(0)) {
             float centerY = renderer.getHeight() / 2.0f;
@@ -115,6 +127,9 @@ public class MenuScene extends Scene {
         }
     }
 
+    /**
+     * 查找最新的录像文件
+     */
     private String findLatestRecording() {
         File dir = new File("recordings");
         if (!dir.exists() || !dir.isDirectory()) return null;
@@ -123,13 +138,19 @@ public class MenuScene extends Scene {
         Arrays.sort(files, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
         return files[0].getAbsolutePath();
     }
-    
+
+    /**
+     * 处理最终选择（主要是START_GAME）
+     */
     private void processSelection() {
         if (selectedOption == MenuOption.START_GAME) {
             switchToGameScene();
         }
     }
-    
+
+    /**
+     * 切换到游戏场景并启用录制
+     */
     private void switchToGameScene() {
         Scene gameScene = new GameScene(engine);
         engine.setScene(gameScene);
@@ -140,7 +161,7 @@ public class MenuScene extends Scene {
             RecordingService svc = new RecordingService(cfg);
             engine.enableRecording(svc);
         } catch (Exception e) {
-            
+            System.err.println("Recoding failed");
         }
     }
     
@@ -163,7 +184,10 @@ public class MenuScene extends Scene {
         
         renderMainMenu();
     }
-    
+
+    /**
+     * 渲染主菜单界面
+     */
     private void renderMainMenu() {
         if (renderer == null) return;
         
@@ -172,7 +196,8 @@ public class MenuScene extends Scene {
         
         float centerX = width / 2.0f;
         float centerY = height / 2.0f;
-        
+
+        // 渲染标题
         String title = "GAME ENGINE";
         float titleWidth = title.length() * 20.0f;
         float titleX = centerX - titleWidth / 2.0f;
@@ -180,7 +205,8 @@ public class MenuScene extends Scene {
         
         renderer.drawRect(centerX - titleWidth / 2.0f - 20, titleY - 40, titleWidth + 40, 80, 0.4f, 0.4f, 0.5f, 1.0f);
         renderer.drawText(titleX, titleY, title, 1.0f, 1.0f, 1.0f, 1.0f);
-        
+
+        // 渲染菜单选项
         for (int i = 0; i < options.length; i++) {
             String text = "";
             if (options[i] == MenuOption.START_GAME) {
@@ -196,7 +222,8 @@ public class MenuScene extends Scene {
             float textY = centerY - 80.0f + i * 80.0f;
             
             float r, g, b;
-            
+
+            // 高亮选中的选项
             if (i == selectedIndex) {
                 r = 1.0f;
                 g = 1.0f;
@@ -211,7 +238,8 @@ public class MenuScene extends Scene {
             
             renderer.drawText(textX, textY, text, r, g, b, 1.0f);
         }
-        
+
+        // 渲染操作提示
         String hint1 = "USE ARROWS OR MOUSE TO SELECT, ENTER TO CONFIRM";
         float hint1Width = hint1.length() * 20.0f;
         float hint1X = centerX - hint1Width / 2.0f;
@@ -222,6 +250,7 @@ public class MenuScene extends Scene {
         float hint2X = centerX - hint2Width / 2.0f;
         renderer.drawText(hint2X, height - 70, hint2, 0.6f, 0.6f, 0.6f, 1.0f);
 
+        // 显示回放功能提示
         if (showReplayInfo) {
             String info = "REPLAY COMING SOON";
             float w = info.length() * 20.0f;

@@ -17,17 +17,21 @@ import org.lwjgl.BufferUtils;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * GPU 渲染器实现：使用 LWJGL 和 OpenGL 进行渲染。
+ * 处理窗口创建、输入事件、基本图形和文本渲染。
+ */
 public class GPURenderer implements IRenderer {
     private int width;
     private int height;
     private String title;
     private InputManager inputManager;
     private boolean initialized;
-    private long window;
-    private Map<Character, Integer> charTextures;
-    private Font font;
+    private long window;    // GLFW 窗口句柄
+    private Map<Character, Integer> charTextures;   // 字符纹理缓存
+    private Font font;  // AWT 字体用于文本渲染
     private int fontSize;
-    private boolean texturesPreloaded;
+    private boolean texturesPreloaded;  // 纹理是否预加载
     private static final String PRELOAD_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?/~` ";
 
     public GPURenderer(int width, int height, String title) {
@@ -44,7 +48,8 @@ public class GPURenderer implements IRenderer {
 
         initialize();
     }
-    
+
+    // 初始化 GLFW 和 OpenGL 上下文
     private void initialize() {
         try {
             System.setProperty("java.awt.headless", "true");
@@ -123,7 +128,8 @@ public class GPURenderer implements IRenderer {
             throw new RuntimeException("GPU渲染器初始化失败: " + e.getMessage(), e);
         }
     }
-    
+
+    // 处理输入回调
     private void setupInput() {
         GLFW.glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
             if (action == GLFW.GLFW_PRESS) {
@@ -145,7 +151,8 @@ public class GPURenderer implements IRenderer {
             inputManager.onMouseMoved((int)xpos, (int)ypos);
         });
     }
-    
+
+    // 设置投影和模型视图矩阵
     @Override
     public void beginFrame() {
         if (!initialized) return;
@@ -175,7 +182,7 @@ public class GPURenderer implements IRenderer {
     @Override
     public void endFrame() {
         if (!initialized) return;
-        GLFW.glfwSwapBuffers(window);
+        GLFW.glfwSwapBuffers(window);   // 交换缓冲区
     }
     
     @Override
@@ -271,7 +278,8 @@ public class GPURenderer implements IRenderer {
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
         GL11.glDisable(GL11.GL_TEXTURE_2D);
     }
-    
+
+    // 预加载常用字符纹理到GPU
     private void preloadTextures() {
         if (!initialized || texturesPreloaded) return;
         
@@ -303,7 +311,8 @@ public class GPURenderer implements IRenderer {
         texturesPreloaded = true;
         System.out.println("预加载字符纹理完成: " + loaded + " 成功, " + failed + " 失败");
     }
-    
+
+
     private int getCharTexture(char c) {
         if (charTextures.containsKey(c)) {
             return charTextures.get(c);
@@ -333,7 +342,8 @@ public class GPURenderer implements IRenderer {
         }
         return textureId;
     }
-    
+
+    // 为字符创建纹理（使用AWT生成新图像，上传到OpenGL）
     private int createCharTexture(char c) {
         try {
             BufferedImage img = new BufferedImage(fontSize, fontSize, BufferedImage.TYPE_INT_ARGB);

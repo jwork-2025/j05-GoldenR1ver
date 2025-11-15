@@ -1,16 +1,31 @@
 package com.gameengine.core;
 
+import com.gameengine.scene.Scene;
+
 import java.util.*;
 
 public class GameObject {
     protected boolean active;
     protected String name;
     protected final List<Component<?>> components;
-    
+
+    // J03: 从Scene出发的通信
+    private Scene scene; // 所属场景
+    public Scene getScene() { return scene; }
+    public void setScene(Scene scene) { this.scene = scene; }
+    // J04: 支持进程之间的通信
+    private Map<String, Object>userData;
+    public synchronized void setUserData(String key, Object value) {userData.put(key, value);}
+    public synchronized Object getUserData(String key) {return userData.get(key);}
+    public synchronized void removeUserData(String key) {userData.remove(key);}
+    public synchronized boolean hasUserData(String key) {return userData.containsKey(key);}
+
     public GameObject() {
         this.active = true;
         this.name = "GameObject";
         this.components = new ArrayList<>();
+        // J04
+        this.userData = new HashMap<>();
     }
     
     public GameObject(String name) {

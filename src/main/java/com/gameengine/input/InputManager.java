@@ -6,14 +6,18 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * 输入管理器：单例模式，管理键盘和鼠标输入状态。
+ * 支持按键状态跟踪、瞬时按键检测和鼠标位置追踪。
+ */
 public class InputManager {
-    private static InputManager instance;
-    private Set<Integer> pressedKeys;
-    private Set<Integer> justPressedKeys;
-    private Map<Integer, Boolean> keyStates;
-    private Vector2 mousePosition;
-    private boolean[] mouseButtons;
-    private boolean[] mouseButtonsJustPressed;
+    private static InputManager instance;   // 单例实例
+    private Set<Integer> pressedKeys;       // 当前按下的键
+    private Set<Integer> justPressedKeys;   // 本帧刚按下的键
+    private Map<Integer, Boolean> keyStates;    // 键状态映射
+    private Vector2 mousePosition;          // 鼠标位置
+    private boolean[] mouseButtons;         // 鼠标按钮状态
+    private boolean[] mouseButtonsJustPressed;  // 本帧刚按下的鼠标按钮
     
     private InputManager() {
         pressedKeys = new HashSet<>();
@@ -30,7 +34,10 @@ public class InputManager {
         }
         return instance;
     }
-    
+
+    /**
+     * 每帧更新：清除瞬时状态
+     */
     public void update() {
         justPressedKeys.clear();
         for (int i = 0; i < mouseButtonsJustPressed.length; i++) {

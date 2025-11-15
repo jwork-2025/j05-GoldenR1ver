@@ -3,23 +3,31 @@ package com.gameengine.components;
 import com.gameengine.core.Component;
 import com.gameengine.math.Vector2;
 
+/**
+ * 物理组件：管理游戏对象的物理属性（速度、加速度、质量、摩擦等）。
+ * 与PhysicsSystem配合实现物理模拟。
+ */
 public class PhysicsComponent extends Component<PhysicsComponent> {
-    private Vector2 velocity;
-    private Vector2 acceleration;
-    private float mass;
-    private float friction;
-    private boolean useGravity;
-    private Vector2 gravity;
-    
+    private Vector2 velocity;   // 速度
+    private Vector2 acceleration;   // 加速度
+    private float mass; // 质量
+    private float friction; // 摩擦力
+    private boolean useGravity; // 是否使用重力
+    private Vector2 gravity;    // 重力方向和大小
+
+    /**
+     * 默认构造函数：零速度、零加速度，质量1，摩擦0.9，禁用重力
+     */
     public PhysicsComponent() {
         this.velocity = new Vector2();
         this.acceleration = new Vector2();
         this.mass = 1.0f;
         this.friction = 0.9f;
         this.useGravity = false;
-        this.gravity = new Vector2(0, 9.8f);
+        this.gravity = new Vector2(0, 9.8f);  // 默认向下重力
     }
-    
+
+    // 指定重量的构造函数
     public PhysicsComponent(float mass) {
         this();
         this.mass = mass;
@@ -32,7 +40,10 @@ public class PhysicsComponent extends Component<PhysicsComponent> {
     @Override
     public void render() {
     }
-    
+
+    /**
+     * 施加力：根据 F=ma 计算加速度变化
+     */
     public void applyForce(Vector2 force) {
         if (mass > 0) {
             acceleration = acceleration.add(force.multiply(1.0f / mass));
@@ -44,7 +55,8 @@ public class PhysicsComponent extends Component<PhysicsComponent> {
             velocity = velocity.add(impulse.multiply(1.0f / mass));
         }
     }
-    
+    public void setAbsVelocity(float Velocity){this.velocity = this.velocity.normalize().multiply(Velocity);}
+
     public void setVelocity(Vector2 velocity) {
         this.velocity = new Vector2(velocity);
     }
@@ -84,7 +96,9 @@ public class PhysicsComponent extends Component<PhysicsComponent> {
     public Vector2 getAcceleration() {
         return new Vector2(acceleration);
     }
-    
+
+    public float getAbsVelocity() {return new Vector2(velocity).magnitude();}
+
     public float getMass() {
         return mass;
     }

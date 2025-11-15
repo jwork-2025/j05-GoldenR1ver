@@ -6,25 +6,30 @@ import com.gameengine.graphics.RendererFactory;
 import com.gameengine.input.InputManager;
 import com.gameengine.scene.Scene;
 
-
+/**
+ * 游戏引擎核心类：管理游戏主循环、场景切换、系统更新和渲染。
+ * 协调所有子系统（物理、输入、渲染）的运行。
+ */
 public class GameEngine {
     private IRenderer renderer;
     private InputManager inputManager;
     private Scene currentScene;
     private PhysicsSystem physicsSystem;
     private boolean running;
-    private float targetFPS;
+    private float targetFPS;    // 目标帧率
     private float deltaTime;
     private long lastTime;
     @SuppressWarnings("unused")
-    private String title;
+    private String title;   // 窗口标题
     // 新录制服务（可选）
     private com.gameengine.recording.RecordingService recordingService;
-    
+
+    // 构造函数：默认使用GPU后端
     public GameEngine(int width, int height, String title) {
         this(width, height, title, RenderBackend.GPU);
     }
-    
+
+    // 主构造函数：初始化所有核心组件
     public GameEngine(int width, int height, String title, RenderBackend backend) {
         this.title = title;
         this.renderer = RendererFactory.createRenderer(backend, width, height, title);
@@ -35,11 +40,13 @@ public class GameEngine {
         this.lastTime = System.nanoTime();
         
     }
-    
+
+    // 初始化引擎（待重写添加自定义逻辑）
     public boolean initialize() {
         return true;
     }
-    
+
+    // 启动游戏主循环
     public void run() {
         if (!initialize()) {
             System.err.println("游戏引擎初始化失败");
@@ -47,9 +54,11 @@ public class GameEngine {
         }
         
         running = true;
-        
+
+        // 初始化当前场景和物理系统
         if (currentScene != null) {
             currentScene.initialize();
+            // 菜单场景不加载物理系统
             if (currentScene.getName().equals("MainMenu")) {
                 physicsSystem = null;
             } else {
@@ -57,13 +66,15 @@ public class GameEngine {
             }
             
         }
-        
+
+        // 主循环定时控制
         long lastFrameTime = System.nanoTime();
         long frameTimeNanos = (long)(1_000_000_000.0 / targetFPS);
         
         while (running) {
             long currentTime = System.nanoTime();
-            
+
+            // 基于目标FPS进行状态更新
             if (currentTime - lastFrameTime >= frameTimeNanos) {
                 update();
                 if (running) {
@@ -73,11 +84,13 @@ public class GameEngine {
             }
             
             renderer.pollEvents();
-            
+
+            // 检查窗口关闭请求
             if (renderer.shouldClose()) {
                 running = false;
             }
-            
+
+            // 让出CPU，避免过度占用
             try {
                 Thread.sleep(1);
             } catch (InterruptedException e) {
@@ -85,8 +98,12 @@ public class GameEngine {
             }
         }
     }
-    
+
+    /**
+     * 更新游戏状态：处理输入、更新场景、物理系统和录制服务
+     */
     private void update() {
+        // 计算帧间隔时间
         long currentTime = System.nanoTime();
         deltaTime = (currentTime - lastTime) / 1_000_000_000.0f;
         lastTime = currentTime;
@@ -94,32 +111,39 @@ public class GameEngine {
         renderer.pollEvents();
         
         
-        
+        // 更新场景
         if (currentScene != null) {
             currentScene.update(deltaTime);
         }
-        
+
+        // 更新物理系统
         if (physicsSystem != null) {
             physicsSystem.update(deltaTime);
         }
-        
+
+        // 更新录制服务
         if (recordingService != null && recordingService.isRecording()) {
             recordingService.update(deltaTime, currentScene, inputManager);
         }
         
         inputManager.update();
-        
+
+        // ESC 键退出
         if (inputManager.isKeyPressed(27)) {
             running = false;
             cleanup();
         }
-        
+
+        // 关闭窗口退出
         if (renderer.shouldClose() && running) {
             running = false;
             cleanup();
         }
     }
-    
+
+    /**
+     * 渲染当前帧
+     */
     private void render() {
         if (renderer == null) return;
         
@@ -131,7 +155,10 @@ public class GameEngine {
         
         renderer.endFrame();
     }
-    
+
+    /**
+     * 切换场景：清理旧场景，初始化新场景
+     */
     public void setScene(Scene scene) {
         if (currentScene != null) {
             if (physicsSystem != null) {
@@ -142,6 +169,8 @@ public class GameEngine {
         }
         this.currentScene = scene;
         if (scene != null) {
+            // J03: 从scene出发的通信
+            scene.setEngine(this);
             if (running) {
                 scene.initialize();
                 if (!scene.getName().equals("MainMenu") && !scene.getName().equals("Replay")) {
@@ -158,7 +187,10 @@ public class GameEngine {
     public void stop() {
         running = false;
     }
-    
+
+    /**
+     * 清理资源：停止录制、清理物理系统、场景和渲染器
+     */
     public void cleanup() {
         if (recordingService != null && recordingService.isRecording()) {
             try { recordingService.stop(); } catch (Exception ignored) {}
@@ -172,7 +204,10 @@ public class GameEngine {
         renderer.cleanup();
     }
 
-    // 可选：外部启用录制（按需调用）
+
+    /**
+     * 启用录制服务
+     */
     public void enableRecording(com.gameengine.recording.RecordingService service) {
         this.recordingService = service;
         try {
@@ -184,6 +219,9 @@ public class GameEngine {
         }
     }
 
+    /**
+     * 禁用录制服务
+     */
     public void disableRecording() {
         if (recordingService != null && recordingService.isRecording()) {
             try { recordingService.stop(); } catch (Exception ignored) {}

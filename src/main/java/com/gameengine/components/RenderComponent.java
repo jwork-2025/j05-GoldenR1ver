@@ -4,6 +4,10 @@ import com.gameengine.core.Component;
 import com.gameengine.graphics.IRenderer;
 import com.gameengine.math.Vector2;
 
+/**
+ * 渲染组件：附加到 GameObject，定义如何渲染（矩形、圆形、线）。
+ * 依赖 TransformComponent 获取位置。
+ */
 public class RenderComponent extends Component<RenderComponent> {
     private IRenderer renderer;
     private RenderType renderType;

@@ -8,9 +8,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * 文件录制存储实现：负责录像文件的读写操作
+ * 实现RecordingStorage接口，处理JSONL格式的录像文件
+ */
 public class FileRecordingStorage implements RecordingStorage {
     private BufferedWriter writer;
 
+    /**
+     * 打开文件写入器，创建必要的目录结构
+     */
     @Override
     public void openWriter(String path) throws IOException {
         Path p = Paths.get(path);
@@ -18,12 +25,19 @@ public class FileRecordingStorage implements RecordingStorage {
         writer = Files.newBufferedWriter(p);
     }
 
+    /**
+     * 写入一行数据到录像文件
+     */
     @Override
     public void writeLine(String line) throws IOException {
         if (writer == null) throw new IllegalStateException("writer not opened");
         writer.write(line);
         writer.newLine();
     }
+
+    /**
+     * 关闭文件写入器，确保数据刷新到磁盘
+     */
 
     @Override
     public void closeWriter() {
@@ -34,6 +48,9 @@ public class FileRecordingStorage implements RecordingStorage {
         }
     }
 
+    /**
+     * 读取录像文件的所有行
+     */
     @Override
     public Iterable<String> readLines(String path) throws IOException {
         List<String> lines = new ArrayList<>();
@@ -46,6 +63,10 @@ public class FileRecordingStorage implements RecordingStorage {
         return lines;
     }
 
+    /**
+     * 列出recordings目录下的所有录像文件
+     * 按最后修改时间倒序排列
+     */
     @Override
     public List<File> listRecordings() {
         File dir = new File("recordings");

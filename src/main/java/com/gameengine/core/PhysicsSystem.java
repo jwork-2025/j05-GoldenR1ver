@@ -12,12 +12,16 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 物理系统：处理物理模拟（速度、加速度、重力、边界碰撞）。
+ * 使用多线程并行更新物理组件。
+ */
 public class PhysicsSystem {
     private Scene scene;
     private ExecutorService physicsExecutor;
     private int screenWidth;
     private int screenHeight;
-    
+
     public PhysicsSystem(Scene scene) {
         this(scene, 1920, 1080);
     }
@@ -29,7 +33,8 @@ public class PhysicsSystem {
         int threadCount = Math.max(2, Runtime.getRuntime().availableProcessors() - 1);
         this.physicsExecutor = Executors.newFixedThreadPool(threadCount);
     }
-    
+
+    // 更新所有组件
     public void update(float deltaTime) {
         List<PhysicsComponent> physicsComponents = scene.getComponents(PhysicsComponent.class);
         if (physicsComponents.isEmpty()) return;
@@ -65,7 +70,8 @@ public class PhysicsSystem {
             }
         }
     }
-    
+
+    // 更新单个组件
     private void updatePhysics(PhysicsComponent physics, float deltaTime) {
         GameObject owner = physics.getOwner();
         if (owner == null) return;
@@ -90,7 +96,8 @@ public class PhysicsSystem {
         
         physics.setAcceleration(new Vector2());
     }
-    
+
+    // 处理边界碰撞
     private void handleBoundary(PhysicsComponent physics) {
         GameObject owner = physics.getOwner();
         if (owner == null) return;

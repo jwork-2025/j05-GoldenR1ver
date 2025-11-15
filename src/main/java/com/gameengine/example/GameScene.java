@@ -1,8 +1,6 @@
 package com.gameengine.example;
 
-import com.gameengine.components.PhysicsComponent;
-import com.gameengine.components.RenderComponent;
-import com.gameengine.components.TransformComponent;
+import com.gameengine.components.*;
 import com.gameengine.core.GameEngine;
 import com.gameengine.core.GameLogic;
 import com.gameengine.core.GameObject;
@@ -13,20 +11,24 @@ import com.gameengine.scene.Scene;
 
 import java.util.*;
 
+/**
+ * 游戏主场景：包含玩家控制、AI行为、碰撞检测和粒子效果
+ * 这是游戏的核心玩法场景
+ */
 public class GameScene extends Scene {
     private final GameEngine engine;
     private IRenderer renderer;
     private Random random;
     private float time;
     private GameLogic gameLogic;
-    private ParticleSystem playerParticles;
-    private List<ParticleSystem> collisionParticles;
-    private Map<GameObject, ParticleSystem> aiPlayerParticles;
-    private boolean waitingReturn;
-    private float waitInputTimer;
-    private float freezeTimer;
-    private final float inputCooldown = 0.25f;
-    private final float freezeDelay = 0.20f;
+    private ParticleSystem playerParticles; // 玩家粒子效果
+    private List<ParticleSystem> collisionParticles;    // 碰撞粒子效果
+    private Map<GameObject, ParticleSystem> aiPlayerParticles;  // AI玩家粒子效果映射
+    private boolean waitingReturn;  // 等待返回菜单状态
+    private float waitInputTimer;   // 输入冷却计时器
+    private float freezeTimer;      // 冻结计时器
+    private final float inputCooldown = 0.25f;  // 输入冷却时间
+    private final float freezeDelay = 0.20f;    // 冻结延迟时间
 
     public GameScene(GameEngine engine) {
         super("GameScene");
@@ -39,19 +41,23 @@ public class GameScene extends Scene {
         this.renderer = engine.getRenderer();
         this.random = new Random();
         this.time = 0;
+        // 初始化游戏逻辑系统
         this.gameLogic = new GameLogic(this);
         this.gameLogic.setGameEngine(engine);
         this.waitingReturn = false;
         this.waitInputTimer = 0f;
         this.freezeTimer = 0f;
 
+        // 创建游戏对象
         createPlayer();
         createAIPlayers();
         createDecorations();
 
+        // 初始化粒子系统
         collisionParticles = new ArrayList<>();
         aiPlayerParticles = new HashMap<>();
 
+        // 创建玩家粒子系统
         playerParticles = new ParticleSystem(renderer, new Vector2(renderer.getWidth() / 2.0f, renderer.getHeight() / 2.0f));
         playerParticles.setActive(true);
         
@@ -62,13 +68,16 @@ public class GameScene extends Scene {
         super.update(deltaTime);
         time += deltaTime;
 
+        // 更新游戏逻辑
         gameLogic.handlePlayerInput(deltaTime);
         gameLogic.handleAIPlayerMovement(deltaTime);
         gameLogic.handleAIPlayerAvoidance(deltaTime);
 
+        // 检查碰撞
         boolean wasGameOver = gameLogic.isGameOver();
         gameLogic.checkCollisions();
 
+        // 游戏结束处理：创建爆炸粒子效果
         if (gameLogic.isGameOver() && !wasGameOver) {
             GameObject player = gameLogic.getUserPlayer();
             if (player != null) {
@@ -101,6 +110,7 @@ public class GameScene extends Scene {
 
         updateParticles(deltaTime);
 
+        // 处理返回菜单的输入
         if (waitingReturn) {
             waitInputTimer += deltaTime;
             freezeTimer += deltaTime;
@@ -112,15 +122,20 @@ public class GameScene extends Scene {
             return;
         }
 
+        // 定期生成AI玩家
         if (time >= 1.0f) {
             createAIPlayer();
             time = 0;
         }
     }
 
+    /**
+     * 更新所有粒子系统
+     */
     private void updateParticles(float deltaTime) {
         boolean freeze = waitingReturn && freezeTimer >= freezeDelay;
 
+        // 更新玩家粒子
         if (playerParticles != null && !freeze) {
             GameObject player = gameLogic.getUserPlayer();
             if (player != null) {
@@ -133,6 +148,7 @@ public class GameScene extends Scene {
             playerParticles.update(deltaTime);
         }
 
+        // 更新AI玩家粒子
         List<GameObject> aiPlayers = gameLogic.getAIPlayers();
         if (!freeze) {
             for (GameObject aiPlayer : aiPlayers) {
@@ -157,6 +173,7 @@ public class GameScene extends Scene {
             }
         }
 
+        // 清理无效的AI粒子系统
         List<GameObject> toRemove = new ArrayList<>();
         for (Map.Entry<GameObject, ParticleSystem> entry : aiPlayerParticles.entrySet()) {
             if (!entry.getKey().isActive() || !aiPlayers.contains(entry.getKey())) {
@@ -167,6 +184,7 @@ public class GameScene extends Scene {
             aiPlayerParticles.remove(removed);
         }
 
+        // 更新碰撞粒子
         for (int i = collisionParticles.size() - 1; i >= 0; i--) {
             ParticleSystem ps = collisionParticles.get(i);
             if (ps != null) {
@@ -185,6 +203,9 @@ public class GameScene extends Scene {
 
         renderParticles();
 
+        // J03: 丰富游戏逻辑: UI
+        renderUI();
+
         if (gameLogic.isGameOver()) {
             float cx = renderer.getWidth() / 2.0f;
             float cy = renderer.getHeight() / 2.0f;
@@ -195,6 +216,9 @@ public class GameScene extends Scene {
         }
     }
 
+    /**
+     * 渲染所有粒子系统
+     */
     private void renderParticles() {
         if (playerParticles != null) {
             int count = playerParticles.getParticleCount();
@@ -216,6 +240,10 @@ public class GameScene extends Scene {
         }
     }
 
+    /**
+     * 创建玩家对象：使用自定义渲染的复杂形状
+     * J03: 增加血量组件和技能组件
+     */
     private void createPlayer() {
         GameObject player = new GameObject("Player") {
             private Vector2 basePosition;
@@ -263,21 +291,37 @@ public class GameScene extends Scene {
                 );
             }
         };
-
+        // J03: 设置场景
+        player.setScene(this);
         player.addComponent(new TransformComponent(new Vector2(renderer.getWidth() / 2.0f, renderer.getHeight() / 2.0f)));
 
         PhysicsComponent physics = player.addComponent(new PhysicsComponent(1.0f));
         physics.setFriction(0.95f);
 
+        // 添加生命组件
+        HealthComponent health = player.addComponent(new HealthComponent(true));
+
+        // 添加技能组件
+        SkillComponent skills = player.addComponent(new SkillComponent());
+
+        // 添加武器组件
+        WeaponComponent weapons = player.addComponent(new WeaponComponent());
+
         addGameObject(player);
     }
 
+    /**
+     * 创建初始AI玩家群
+     */
     private void createAIPlayers() {
         for (int i = 0; i < 30; i++) {
             createAIPlayer();
         }
     }
 
+    /**
+     * 创建单个AI玩家
+     */
     private void createAIPlayer() {
         GameObject aiPlayer = new GameObject("AIPlayer") {
             @Override
@@ -292,6 +336,7 @@ public class GameScene extends Scene {
             }
         };
 
+        // 确保AI生成位置远离玩家
         Vector2 position;
         do {
             position = new Vector2(
@@ -316,9 +361,17 @@ public class GameScene extends Scene {
         ));
         physics.setFriction(0.98f);
 
+        // 添加生命值组件
+        HealthComponent health = aiPlayer.addComponent(new HealthComponent(false));
+        // J03: 设置场景
+        aiPlayer.setScene(this);
+
         addGameObject(aiPlayer);
     }
 
+    /**
+     * 创建装饰性对象（背景元素）
+     */
     private void createDecorations() {
         for (int i = 0; i < 5; i++) {
             createDecoration();

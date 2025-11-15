@@ -3,10 +3,14 @@ package com.gameengine.components;
 import com.gameengine.core.Component;
 import com.gameengine.math.Vector2;
 
+/**
+ * 变换组件：管理游戏对象的位置、缩放和旋转。
+ * 是所有需要空间变换的游戏对象的基础组件。
+ */
 public class TransformComponent extends Component<TransformComponent> {
-    private Vector2 position;
-    private Vector2 scale;
-    private float rotation;
+    private Vector2 position;   // 世界坐标位置
+    private Vector2 scale;  // 缩放大小
+    private float rotation; // 角度
     
     public TransformComponent() {
         this.position = new Vector2();

@@ -1,56 +1,70 @@
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/iHSjCEgj)
+
 # J05
 
-本版本采用 LWJGL + OpenGL 实现纯 GPU 渲染，窗口与输入基于 GLFW，文本渲染通过 AWT 字体离屏生成纹理后在 OpenGL 中批量绘制。
+基于J05示例代码完善而来的新游戏。为了适配更高性能的GPU渲染，选择在J05上直接进行更改。
 
+修改内容包括
 
-## 核心类型与概念
+## 更好的注释和代码逻辑
 
-- **Scene（场景）**：一组 `GameObject` 的容器，负责生命周期（`initialize/update/render/clear`）与场景间切换。示例：`MenuScene`, `GameScene`, `ReplayScene`。
-- **GameObject（游戏对象）**：由多个 `Component` 组成的实体，管理自身更新与渲染委托。支持自定义 `render()`（如玩家外观组合）。
-- **Component（组件）**：面向数据/单体行为的可组合单元，例如：
-  - `TransformComponent`：位置/旋转/缩放（本项目主要使用位置与尺寸）
-  - `PhysicsComponent`：速度/摩擦/运动学数据（行为由 `PhysicsSystem` 统一处理）
-  - `RenderComponent`：基础形状绘制（矩形/圆等，颜色与尺寸）
-- **System（系统）**：面向“过程”的批处理逻辑，跨对象统一执行。例如 `PhysicsSystem` 负责所有带 `PhysicsComponent` 的对象物理更新。并行物理计算通过 `ExecutorService` 线程池实现，按批处理提升多核利用。
-- **IRenderer/GPURenderer**：渲染后端抽象与 LWJGL 实现，负责窗口/上下文/绘制 API 封装，文本纹理缓存与绘制。
-- **EntityFactory**：常用外观/组合的建造器（如 Player、AI 外观），便于游戏与回放共享同一套“预制”。
+通读所有代码，为所有代码添加了易懂的注释。
 
+在Scene类中增加GameEngine和GameLogic对象，将Scene类作为类间通信的枢纽。各个组件可以通过Scene类进行通信。
 
-## 游戏录制/回放机制
-
-- **存储抽象**：`RecordingStorage` 定义录制的读/写/列举接口，默认实现 `FileRecordingStorage`（JSONL 文件）。
-- **录制服务**：`RecordingService` 在运行时异步写 JSONL 行：
-  - header：窗口大小/版本
-  - input：关键输入事件（just pressed）
-  - keyframe：周期关键帧（对象位置与可选渲染外观 `rt/w/h/color`）
-  - 采用“暖机 + 周期写入 + 结束强制写入”的策略，避免空关键帧
-- **回放场景**：`ReplayScene` 读取 JSONL，解析为 keyframe 列表，按时间在相邻关键帧间做线性插值，使用 `EntityFactory`/`RenderComponent` 恢复外观并渲染。
-
-
-## 编译与运行
-
-1) 下载 LWJGL 依赖与原生库（按平台自动处理）
-
-```bash
-./download_lwjgl.sh
+```java
+    private GameEngine engine;
+    private GameLogic gameLogic;
+    public void setEngine(GameEngine engine) {
+        this.engine = engine;
+        if (engine != null) {
+            this.gameLogic = new GameLogic(this);
+        }
+    }
+    public GameEngine getEngine() {return engine;}
+    public IRenderer getRenderer() {return engine != null ? engine.getRenderer() : null;}
+    public GameLogic getGameLogic() {return gameLogic;}
 ```
 
-2) 编译并启动（脚本会自动编译 src/main/java 下所有源码并运行）
+为GameObject增加了线程间的消息机制。
 
-```bash
-./run.sh
+```java
+private Map<String, Object>userData;
+    public synchronized void setUserData(String key, Object value) {userData.put(key, value);}
+    public synchronized Object getUserData(String key) {return userData.get(key);}
+    public synchronized void removeUserData(String key) {userData.remove(key);}
+    public synchronized boolean hasUserData(String key) {return userData.containsKey(key);}
+
 ```
 
+## 更多的游玩内容
 
-## 作业要求
+* 增加了血量组件`HealthComponent` ，敌人和玩家都有血量设定，修改了玩家的死亡逻辑。
 
-- 参考本仓库代码，完善你自己的游戏：
- 
-- 为你的游戏设计并实现“存档与回放”功能：
-  - 存档：定义存储抽象（文件/网络/内存均可），录制关键帧 + 输入/事件
-  - 回放：读取存档，恢复对象状态并插值渲染，保证外观与行为可见且稳定
+* 增加了技能组件`SkillComponent`，实现了四娃的技能喷火，五娃的技能水枪，七娃的技能隐身（加速+无敌）。以及技能对应的魔力系统。喷火技能支持持续释放，水枪技能支持蓄力。
 
-提示：请尽量保持模块解耦（渲染/输入/逻辑/存储）。
+* 增加了武器组件`WeaponComponent`和掉落物`WeaponDrop`，实现了拾取、应用、强化、输出日志的功能。
 
-**重要提醒：尽量手写代码，不依赖自动生成，考试会考！**
+* 增加了`Config`文件，便于快速调试游戏参数。
+
+* 增加了一些复杂的粒子效果。`
+
+## 进行性能优化
+
+部分粒子效果使用多线程渲染。
+
+敌人的寻路+索敌逻辑使用多线程渲染。
+
+## 存档和读档功能
+
+**读档功能**
+
+基于关键帧和按键事件驱动的存读档系统。记录所有SkillComponent，TransformComponent，RenderComponent的状态。在目前的实现中记录：人类玩家的技能状态，所有玩家的位置和图像，子弹的位置和图像，WeaponDrop的位置和图像。
+
+**数据结构**
+
+使用JSONL格式存储：每行一个JSON对象。 记录头部信息、输入事件、实体状态和时间戳。其中头部信息为版本号、屏幕尺寸，用于控制窗口大小。输入事件为玩家按键的瞬时状态。实体状态为玩家的位置、渲染类型、尺寸、颜色等，修改示例录像系统，通过唯一对象ID机制动态跟踪实体生命周期，适配敌人可能会被杀死的可能，彻底解决敌人瞬移问题。时间戳用于精确地同步回放。 
+
+**性能优化**
+
+主线程生成数据，使用专门的录制线程异步写入文件。通过每0.5s记录游戏完整状态，降低性能开销。且仅在关键帧之间只记录输入事件变化，通过精度控制减少数据量，显著减少录像的文件大小，同时采用插值算法实现平滑回放，性能优化显著。

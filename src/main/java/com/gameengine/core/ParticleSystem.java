@@ -7,6 +7,12 @@ import java.util.List;
 import java.util.Iterator;
 import java.util.Random;
 
+
+/**
+ * 粒子系统类：管理粒子效果
+ * 目前包括： 爆炸、尾随
+ * 支持持续生成和爆发模式，可配置粒子属性（速度、生命周期、颜色等）
+ */
 public class ParticleSystem {
     private List<Particle> particles;
     private Random random;
@@ -17,7 +23,10 @@ public class ParticleSystem {
     private boolean active;
     
     private Config config;
-    
+
+    /**
+     * 内部粒子类：表示单个粒子
+     */
     private static class Particle {
         private Vector2 position;
         private Vector2 velocity;
@@ -25,7 +34,8 @@ public class ParticleSystem {
         private float maxLife;
         private float size;
         private float r, g, b, a;
-        
+
+        // 初始化粒子属性
         public Particle(Vector2 position, Vector2 velocity, float life, float size, float r, float g, float b) {
             this.position = new Vector2(position);
             this.velocity = new Vector2(velocity);
@@ -37,11 +47,14 @@ public class ParticleSystem {
             this.b = b;
             this.a = 1.0f;
         }
-        
+
+        // 粒子更新
         public void update(float deltaTime) {
+            // 位置
             position = position.add(velocity.multiply(deltaTime));
+            // 生命周期
             life -= deltaTime;
-            
+            // 透明度
             if (life > 0) {
                 a = life / maxLife;
                 velocity = velocity.multiply(0.98f);
@@ -76,7 +89,10 @@ public class ParticleSystem {
             return a;
         }
     }
-    
+
+    /**
+     * 粒子配置类
+     */
     public static class Config {
         public float spawnRate = 0.015f;
         public int initialCount = 30;
@@ -102,7 +118,8 @@ public class ParticleSystem {
         public float burstGMin = 0.5f;
         public float burstGMax = 1.0f;
         public float burstB = 0.0f;
-        
+
+        // 默认玩家跟随黄色粒子
         public static Config defaultPlayer() {
             Config config = new Config();
             config.spawnRate = 0.015f;
@@ -120,7 +137,8 @@ public class ParticleSystem {
             config.minRenderSize = 2.0f;
             return config;
         }
-        
+
+        // 光源蓝色粒子
         public static Config light() {
             Config config = new Config();
             config.spawnRate = 0.05f;
@@ -139,11 +157,13 @@ public class ParticleSystem {
             return config;
         }
     }
-    
+
+    // 初始化粒子系统——玩家粒子
     public ParticleSystem(IRenderer renderer, Vector2 position) {
         this(renderer, position, Config.defaultPlayer());
     }
-    
+
+    // 初始化粒子系统——根据config
     public ParticleSystem(IRenderer renderer, Vector2 position, Config config) {
         this.particles = new ArrayList<>();
         this.random = new Random();
@@ -168,16 +188,18 @@ public class ParticleSystem {
             this.position = new Vector2(position);
         }
     }
-    
+
+    // 更新粒子状态
     public void update(float deltaTime) {
         if (active) {
+            // 按生成速率添加新粒子
             timeSinceLastSpawn += deltaTime;
             if (timeSinceLastSpawn >= spawnRate) {
                 spawnParticle();
                 timeSinceLastSpawn = 0f;
             }
         }
-        
+        // 更新并移除死亡粒子
         Iterator<Particle> iterator = particles.iterator();
         while (iterator.hasNext()) {
             Particle particle = iterator.next();
@@ -187,7 +209,8 @@ public class ParticleSystem {
             }
         }
     }
-    
+
+    // 添加新粒子
     private void spawnParticle() {
         if (position == null) return;
         
@@ -219,10 +242,12 @@ public class ParticleSystem {
     public void setSpawnRate(float rate) {
         this.spawnRate = rate;
     }
-    
+
+    // 渲染所有存活粒子
     public void render() {
         if (renderer == null) return;
-        
+
+        // 遍历所有粒子，绘制矩形
         for (Particle particle : particles) {
             Vector2 pos = particle.getPosition();
             float size = particle.getSize();
@@ -247,7 +272,8 @@ public class ParticleSystem {
             }
         }
     }
-    
+
+    // 一次性渲染多个[count]粒子
     public void burst(int count) {
         for (int i = 0; i < count; i++) {
             float angle = (float) (random.nextFloat() * 2.0 * Math.PI);
